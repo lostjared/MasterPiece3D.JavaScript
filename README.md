@@ -14,7 +14,7 @@ https://github.com/lostjared/Old.Learning.Projects/tree/master/mp3d_win32_vs.net
 - Control falling blocks using keyboard inputs.
 - Rotate block colors using the Up arrow key.
 - Move blocks left, right, and down using arrow keys.
-- New blocks are released periodically.
+- New blocks are released when last block it set to the grid.
 - Basic game mechanics implemented with WebGL for rendering.
 
 ## Controls
