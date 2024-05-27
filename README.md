@@ -34,7 +34,5 @@ https://github.com/lostjared/Old.Learning.Projects/tree/master/mp3d_win32_vs.net
 - `index.html`: The main HTML file.
 - `main.js`: The main JavaScript file containing game logic and WebGL 
 rendering.
-- `style.css`: Optional CSS file for styling the game (not used in this 
-project).
 - `gl-matrix.js`: A library for matrix operations (used for 
 transformations in WebGL).
