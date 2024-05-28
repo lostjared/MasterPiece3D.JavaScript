@@ -1,6 +1,7 @@
 const canvas = document.getElementById("glCanvas");
 const gl = canvas.getContext("webgl");
-
+const score_tag = document.getElementById("score");
+score_tag.innerHTML = "Score: 0 Lines: 0";
 if (!gl) {
     console.error("WebGL not supported");
 }
@@ -480,6 +481,7 @@ function moveDown() {
         if (gblock[2].y < 3) {
             clearBoard();
             console.log("Game Over", score);
+            score_tag.innerHTML = "Score: 0 Lines: 0";
         } else {
             releaseBlock();
         }
@@ -619,6 +621,7 @@ function addLine(type) {
         xspeed = 10;
         return;
     }
+    score_tag.innerText = "Score: " + score + " Lines: " + lines;
 }
 
 function shiftUp() {

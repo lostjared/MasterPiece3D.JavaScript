@@ -4,22 +4,41 @@
     <meta charset="UTF-8">
     <title>MasterPiece 3D</title>
     <style>
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #000;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+}
 
-	body {
-	     background: black;
-	}
+#label {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
 
-        canvas {
-            display: block;
-            margin: 0 auto;
-            background: #000;
-	    width: 60%;
-	    height: auto;
-        border: 2px solid white;
-        padding: 30px;
-        }
+#canvas-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
 
-        .score {
+#glCanvas {
+    border: 2px solid white;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    width: 95%;
+    height: 95%;
+}
+        #score {
             color: white;
             font-size: 32px;
             text-align: center;
@@ -28,7 +47,7 @@
     </style>
 </head>
 <body>
-    <div id="score" class="score">Score: 0</span>
+    <div id="score">>Score: 0</div>
     <canvas id="glCanvas" width="640" height="480"></canvas>
 <script 
 src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
