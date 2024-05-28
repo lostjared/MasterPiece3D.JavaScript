@@ -482,6 +482,8 @@ function moveDown() {
             clearBoard();
             console.log("Game Over", score);
             score_tag.innerHTML = "Score: 0 Lines: 0";
+            score = 0;
+            lines = 0;
         } else {
             releaseBlock();
         }
