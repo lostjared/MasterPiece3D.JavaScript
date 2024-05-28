@@ -13,12 +13,22 @@
             display: block;
             margin: 0 auto;
             background: #000;
-	    width: 65%;
-	    height: 65%;
+	    width: 60%;
+	    height: auto;
+        border: 2px solid white;
+        padding: 30px;
         }
+
+        .score {
+            color: white;
+            font-size: 32px;
+            text-align: center;
+        }
+
     </style>
 </head>
 <body>
+    <div id="score" class="score">Score: 0</span>
     <canvas id="glCanvas" width="640" height="480"></canvas>
 <script 
 src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>

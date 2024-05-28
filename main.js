@@ -65,20 +65,21 @@ const gblock = [new GameBlock(), new GameBlock(), new GameBlock()];
 // Shader sources
 const vertexShaderSrc = `
 attribute vec3 aPosition;
-attribute vec3 aColor;
+attribute vec2 aTexCoord;
 uniform mat4 uModelViewMatrix;
 uniform mat4 uProjectionMatrix;
-varying vec3 vColor;
+varying vec2 vTexCoord;
 void main(void) {
     gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aPosition, 1.0);
-    vColor = aColor;
+    vTexCoord = aTexCoord;
 }`;
 
 const fragmentShaderSrc = `
 precision mediump float;
-varying vec3 vColor;
+varying vec2 vTexCoord;
+uniform sampler2D uSampler;
 void main(void) {
-    gl_FragColor = vec4(vColor, 1.0);
+    gl_FragColor = texture2D(uSampler, vTexCoord);
 }`;
 
 // Compile shaders
@@ -108,19 +109,61 @@ if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
 
 gl.useProgram(shaderProgram);
 
-// Get attribute and uniform locations
 const aPosition = gl.getAttribLocation(shaderProgram, 'aPosition');
-const aColor = gl.getAttribLocation(shaderProgram, 'aColor');
+const aTexCoord = gl.getAttribLocation(shaderProgram, 'aTexCoord');
 const uModelViewMatrix = gl.getUniformLocation(shaderProgram, 'uModelViewMatrix');
 const uProjectionMatrix = gl.getUniformLocation(shaderProgram, 'uProjectionMatrix');
+const uSampler = gl.getUniformLocation(shaderProgram, 'uSampler');
 
-// Enable the attributes
-gl.enableVertexAttribArray(aPosition);
-gl.enableVertexAttribArray(aColor);
+// Ensure attribute locations are valid before enabling
+if (aPosition !== -1) {
+    gl.enableVertexAttribArray(aPosition);
+}
+if (aTexCoord !== -1) {
+    gl.enableVertexAttribArray(aTexCoord);
+}
 
-// Create a buffer for positions and colors
+// Create buffers
 const positionBuffer = gl.createBuffer();
-const colorBuffer = gl.createBuffer();
+const texCoordBuffer = gl.createBuffer();
+
+function loadTexture(gl, url) {
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+
+    // Placeholder for texture while loading
+    const level = 0;
+    const internalFormat = gl.RGBA;
+    const width = 1;
+    const height = 1;
+    const border = 0;
+    const srcFormat = gl.RGBA;
+    const srcType = gl.UNSIGNED_BYTE;
+    const pixel = new Uint8Array([0, 0, 255, 255]); // blue
+    gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, border, srcFormat, srcType, pixel);
+
+    const image = new Image();
+    image.crossOrigin = "anonymous"; // Allow cross-origin images
+    image.onload = function() {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, srcFormat, srcType, image);
+
+        if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+            gl.generateMipmap(gl.TEXTURE_2D);
+        } else {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        }
+    };
+    image.src = url;
+
+    return texture;
+}
+
+function isPowerOf2(value) {
+    return (value & (value - 1)) == 0;
+}
 
 function setRectangle(x, y, z, width, height, depth) {
     const x1 = x;
@@ -131,37 +174,131 @@ function setRectangle(x, y, z, width, height, depth) {
     const z2 = z + depth;
 
     return new Float32Array([
-        x1, y1, z1,  x2, y1, z1,  x1, y2, z1,  x1, y2, z1,  x2, y1, z1,  x2, y2, z1,  // front
-        x1, y1, z2,  x2, y1, z2,  x1, y2, z2,  x1, y2, z2,  x2, y1, z2,  x2, y2, z2,  // back
-        x1, y1, z1,  x1, y2, z1,  x1, y1, z2,  x1, y1, z2,  x1, y2, z1,  x1, y2, z2,  // left
-        x2, y1, z1,  x2, y2, z1,  x2, y1, z2,  x2, y1, z2,  x2, y2, z1,  x2, y2, z2,  // right
-        x1, y1, z1,  x2, y1, z1,  x1, y1, z2,  x1, y1, z2,  x2, y1, z1,  x2, y1, z2,  // bottom
-        x1, y2, z1,  x2, y2, z1,  x1, y2, z2,  x1, y2, z2,  x2, y2, z1,  x2, y2, z2   // top
+        // Front face
+        x1, y1, z1,
+        x2, y1, z1,
+        x1, y2, z1,
+        x1, y2, z1,
+        x2, y1, z1,
+        x2, y2, z1,
+
+        // Back face
+        x1, y1, z2,
+        x2, y1, z2,
+        x1, y2, z2,
+        x1, y2, z2,
+        x2, y1, z2,
+        x2, y2, z2,
+
+        // Left face
+        x1, y1, z1,
+        x1, y2, z1,
+        x1, y1, z2,
+        x1, y1, z2,
+        x1, y2, z1,
+        x1, y2, z2,
+
+        // Right face
+        x2, y1, z1,
+        x2, y2, z1,
+        x2, y1, z2,
+        x2, y1, z2,
+        x2, y2, z1,
+        x2, y2, z2,
+
+        // Top face
+        x1, y2, z1,
+        x2, y2, z1,
+        x1, y2, z2,
+        x1, y2, z2,
+        x2, y2, z1,
+        x2, y2, z2,
+
+        // Bottom face
+        x1, y1, z1,
+        x2, y1, z1,
+        x1, y1, z2,
+        x1, y1, z2,
+        x2, y1, z1,
+        x2, y1, z2
     ]);
 }
 
-function setColors(r, g, b) {
-    const color = [r, g, b];
-    const colors = [];
+function setTexCoords() {
+    return new Float32Array([
+        // Front face
+        0.0, 0.0,
+        1.0, 0.0,
+        0.0, 1.0,
+        0.0, 1.0,
+        1.0, 0.0,
+        1.0, 1.0,
 
-    for (let i = 0; i < 6; i++) {
-        colors.push(...color, ...color, ...color, ...color, ...color, ...color);
-    }
+        // Back face
+        0.0, 0.0,
+        1.0, 0.0,
+        0.0, 1.0,
+        0.0, 1.0,
+        1.0, 0.0,
+        1.0, 1.0,
 
-    return new Float32Array(colors);
+        // Left face
+        0.0, 0.0,
+        1.0, 0.0,
+        0.0, 1.0,
+        0.0, 1.0,
+        1.0, 0.0,
+        1.0, 1.0,
+
+        // Right face
+        0.0, 0.0,
+        1.0, 0.0,
+        0.0, 1.0,
+        0.0, 1.0,
+        1.0, 0.0,
+        1.0, 1.0,
+
+        // Top face
+        0.0, 0.0,
+        1.0, 0.0,
+        0.0, 1.0,
+        0.0, 1.0,
+        1.0, 0.0,
+        1.0, 1.0,
+
+        // Bottom face
+        0.0, 0.0,
+        1.0, 0.0,
+        0.0, 1.0,
+        0.0, 1.0,
+        1.0, 0.0,
+        1.0, 1.0
+    ]);
 }
 
-function drawRectangle(x, y, z, width, height, depth, r, g, b) {
+function drawRectangle(x, y, z, width, height, depth, textureIndex) {
+    gl.bindTexture(gl.TEXTURE_2D, textures[textureIndex]);
+
+    const positions = setRectangle(x, y, z, width, height, depth);
+    const texCoords = setTexCoords();
+
+    // Bind and set buffer data for positions
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, setRectangle(x, y, z, width, height, depth), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
     gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, setColors(r, g, b), gl.STATIC_DRAW);
-    gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 0, 0);
+    // Bind and set buffer data for texture coordinates
+    gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, texCoords, gl.STATIC_DRAW);
+    gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
 
-    gl.drawArrays(gl.TRIANGLES, 0, 36);
+    // Correct number of vertices for a cube (6 faces, 2 triangles per face, 3 vertices per triangle)
+    const vertexCount = positions.length / 3;
+
+    gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
 }
+
+let textures = [];
 
 function initGL() {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -172,7 +309,14 @@ function initGL() {
     resizeGL(canvas.width, canvas.height);
     setScreen(ID_GAME);
     releaseBlock();
-    setInterval(automaticMoveDown, 850); // Move block down every 300 milliseconds
+    setInterval(automaticMoveDown, 850); 
+    textures.push(loadTexture(gl, 'img/block1.png'));
+    textures.push(loadTexture(gl, 'img/block2.png'));
+    textures.push(loadTexture(gl, 'img/block3.png'));
+    textures.push(loadTexture(gl, 'img/block4.png'));
+    textures.push(loadTexture(gl, 'img/block5.png'));
+    textures.push(loadTexture(gl, 'img/block6.png'));
+    textures.push(loadTexture(gl, 'img/block7.png'));
 }
 
 function resizeGL(width, height) {
@@ -217,22 +361,22 @@ function drawBoard() {
         for (let z = 0; z < 8; z++) {
             // Draw the static tiles
             if (tiles[i][z].color !== 0) {
-                drawTileBlock(i, z, tiles[i][z]);
+                drawTileBlock(i, z, tiles[i][z], tiles[i][z].color - 1);
             }
         }
     }
     // Draw the current game block
     for (let p = 0; p < 3; p++) {
-        drawGameBlock(gblock[p]);
+        drawGameBlock(gblock[p], gblock[p].color - 1);
     }
 }
 
-function drawGameBlock(block) {
-    drawRectangle(block.x * 3.0, -block.y * 2.0, 0.0, 1.0, 1.0, 1.0, block.r, block.g, block.b);
+function drawGameBlock(block, textureIndex) {
+   drawRectangle(block.x * 3.0, -block.y * 2.0, 0.0, 1.0, 1.0, 1.0, textureIndex);
 }
 
-function drawTileBlock(i, z, block) {
-    drawRectangle(z * 3.0, -i * 2.0, 0.0, 1.0, 1.0, 1.0, block.r, block.g, block.b);
+function drawTileBlock(i, z, block, textureIndex) {
+    drawRectangle(z * 3.0, -i * 2.0, 0.0, 1.0, 1.0, 1.0, textureIndex);
 }
 
 function keyDown(event) {
@@ -279,8 +423,8 @@ function handleGameKeys(key) {
             moveDown();
             break;
         case 'ArrowUp':
-                shiftUp();
-		break;
+            shiftUp();
+            break;
     }
 }
 
@@ -476,6 +620,7 @@ function addLine(type) {
         return;
     }
 }
+
 function shiftUp() {
     const temp = { color: gblock[0].color, r: gblock[0].r, g: gblock[0].g, b: gblock[0].b };
 
@@ -513,6 +658,7 @@ function shiftDown() {
     gblock[0].g = temp.g;
     gblock[0].b = temp.b;
 }
+
 document.addEventListener("keydown", keyDown);
 
 initGL();
