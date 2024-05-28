@@ -30,6 +30,15 @@ https://github.com/lostjared/Old.Learning.Projects/tree/master/mp3d_win32_vs.net
 ### Prerequisites
 
 - Web browser with WebGL support (most modern browsers).
+- Web Server (can use Python)
+
+To View this locally run in this directory
+
+```bash
+python3 -m http.server 3000
+```
+then point your web browser to localhost:3000
+
 
 ## Project Structure
 
